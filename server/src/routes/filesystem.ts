@@ -77,6 +77,108 @@ interface SkillCategory {
   skills: SkillInfo[]
 }
 
+interface ProfileRole {
+  id: string
+  name: string
+  title: string
+  summary: string
+  primaryUseCases: string[]
+  responsibilities: string[]
+  boundaries: string[]
+  nextStep: string
+}
+
+const defaultProfileRoles: ProfileRole[] = [
+  {
+    id: 'bb',
+    name: 'bb',
+    title: '内容策略',
+    summary: '负责内容方向、叙事结构、表达策略与信息组织。',
+    primaryUseCases: [
+      '选题、内容策略、内容框架设计',
+      '文章/脚本/知识产品的叙事与结构优化',
+      '需要先把“说什么、怎么说”定义清楚的任务',
+    ],
+    responsibilities: [
+      '定义目标受众、信息层级和表达路线',
+      '整理内容卖点、结构、标题与呈现方式',
+      '把模糊想法收敛成可执行内容方案',
+    ],
+    boundaries: [
+      '不优先负责工程实现和代码调试',
+      '不负责最终平台适配包装',
+      '适合作为前置策略角色，而不是最终发布角色',
+    ],
+    nextStep: '如果任务核心是“内容要怎么设计”，优先切到 bb。',
+  },
+  {
+    id: 'dd',
+    name: 'dd',
+    title: '工程实现',
+    summary: '负责编码、调试、自动化、集成和工程落地。',
+    primaryUseCases: [
+      '写代码、修 bug、排查报错',
+      '搭建自动化流程、脚本、接口与功能',
+      '把方案真正做成可运行的实现',
+    ],
+    responsibilities: [
+      '拆解实现路径并完成开发改造',
+      '处理依赖、类型、接口、构建与运行问题',
+      '验证功能是否通过构建、测试或实际运行',
+    ],
+    boundaries: [
+      '不优先负责内容定位与传播策略',
+      '不以社媒平台包装为第一职责',
+      '更适合解决“怎么做出来”而不是“怎么讲出来”',
+    ],
+    nextStep: '如果任务核心是“把东西做出来”，优先切到 dd。',
+  },
+  {
+    id: 'pp',
+    name: 'pp',
+    title: '发布包装',
+    summary: '负责平台适配、发布包装、社媒改写与成品输出。',
+    primaryUseCases: [
+      '同一内容改写成不同平台版本',
+      '整理发布说明、更新日志、PR 描述、社媒文案',
+      '需要考虑平台语气、长度、格式和交付样式的任务',
+    ],
+    responsibilities: [
+      '把已有内容包装成适配目标平台的版本',
+      '统一格式、标题、摘要、CTA 与发布结构',
+      '保证输出更接近“可发出去”的最终成品',
+    ],
+    boundaries: [
+      '不优先承担深度工程调试',
+      '通常建立在已有策略或已有内容之上',
+      '更偏交付包装，而不是前期策略或底层实现',
+    ],
+    nextStep: '如果任务核心是“怎么发、怎么包装、怎么适配平台”，优先切到 pp。',
+  },
+  {
+    id: 'zhengyang',
+    name: 'zhengyang',
+    title: '长期管理',
+    summary: '负责个人偏好、长期规划、工作管理与持续记忆。',
+    primaryUseCases: [
+      '梳理长期偏好、工作规则和协作习惯',
+      '管理长期计划、节奏、优先级与复盘信息',
+      '需要把短期任务沉淀为长期协作资产',
+    ],
+    responsibilities: [
+      '维护稳定偏好、协作规则与长期目标',
+      '帮助形成持续性的工作管理框架',
+      '把跨会话有价值的信息沉淀下来',
+    ],
+    boundaries: [
+      '不替代具体执行角色完成工程或内容产出',
+      '更关注长期一致性，而不是单次任务冲刺',
+      '适合作为管理层和记忆层，而不是所有任务的主执行者',
+    ],
+    nextStep: '如果任务核心是“长期怎么协作、怎么管理、怎么记住”，优先切到 zhengyang。',
+  },
+]
+
 // --- Helpers ---
 
 function extractDescription(content: string): string {
@@ -117,6 +219,47 @@ async function safeStat(filePath: string): Promise<{ mtime: number } | null> {
     return { mtime: Math.round(s.mtimeMs) }
   } catch {
     return null
+  }
+}
+
+function normalizeStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.map(item => String(item ?? '').trim()).filter(Boolean)
+}
+
+function normalizeProfileRole(input: unknown, index: number): ProfileRole {
+  const role = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
+  const fallback = defaultProfileRoles[index] || defaultProfileRoles[0]
+
+  return {
+    id: String(role.id || fallback.id).trim(),
+    name: String(role.name || role.id || fallback.name).trim(),
+    title: String(role.title || fallback.title).trim(),
+    summary: String(role.summary || fallback.summary).trim(),
+    primaryUseCases: normalizeStringArray(role.primaryUseCases).length ? normalizeStringArray(role.primaryUseCases) : fallback.primaryUseCases,
+    responsibilities: normalizeStringArray(role.responsibilities).length ? normalizeStringArray(role.responsibilities) : fallback.responsibilities,
+    boundaries: normalizeStringArray(role.boundaries).length ? normalizeStringArray(role.boundaries) : fallback.boundaries,
+    nextStep: String(role.nextStep || fallback.nextStep).trim(),
+  }
+}
+
+async function loadProfileRoles(): Promise<{ roles: ProfileRole[]; source: 'default' | 'file'; mtime: number | null }> {
+  const filePath = join(hermesDir, 'memories', 'PROFILE_ROLES.json')
+  const raw = await safeReadFile(filePath)
+  const fileStat = await safeStat(filePath)
+
+  if (!raw) {
+    return { roles: defaultProfileRoles, source: 'default', mtime: null }
+  }
+
+  const parsed = JSON.parse(raw) as { roles?: unknown[] }
+  const inputRoles = Array.isArray(parsed.roles) ? parsed.roles : []
+  const normalized = inputRoles.map((role, index) => normalizeProfileRole(role, index)).filter(role => role.id)
+
+  return {
+    roles: normalized.length > 0 ? normalized : defaultProfileRoles,
+    source: 'file',
+    mtime: fileStat?.mtime || null,
   }
 }
 
@@ -360,6 +503,37 @@ fsRoutes.post('/api/memory', async (ctx) => {
 
   try {
     await writeFile(filePath, content, 'utf-8')
+    ctx.body = { success: true }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+})
+
+fsRoutes.get('/api/profile/roles', async (ctx) => {
+  try {
+    ctx.body = await loadProfileRoles()
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
+})
+
+fsRoutes.post('/api/profile/roles', async (ctx) => {
+  const { roles } = (ctx.request as any).body as { roles?: unknown[] }
+
+  if (!Array.isArray(roles)) {
+    ctx.status = 400
+    ctx.body = { error: 'roles must be an array' }
+    return
+  }
+
+  const normalized = roles.map((role, index) => normalizeProfileRole(role, index)).filter(role => role.id)
+  const filePath = join(hermesDir, 'memories', 'PROFILE_ROLES.json')
+
+  try {
+    await mkdir(join(hermesDir, 'memories'), { recursive: true })
+    await writeFile(filePath, JSON.stringify({ roles: normalized }, null, 2) + '\n', 'utf-8')
     ctx.body = { success: true }
   } catch (err: any) {
     ctx.status = 500

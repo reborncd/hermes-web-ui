@@ -28,6 +28,23 @@ export interface MemoryData {
   user_mtime: number | null
 }
 
+export interface ProfileRole {
+  id: string
+  name: string
+  title: string
+  summary: string
+  primaryUseCases: string[]
+  responsibilities: string[]
+  boundaries: string[]
+  nextStep: string
+}
+
+export interface ProfileRolesData {
+  roles: ProfileRole[]
+  mtime: number | null
+  source: 'default' | 'file'
+}
+
 export async function fetchSkills(): Promise<SkillCategory[]> {
   const res = await request<SkillListResponse>('/api/skills')
   return res.categories
@@ -54,6 +71,16 @@ export async function saveMemory(section: 'memory' | 'user', content: string): P
   })
 }
 
+export async function fetchProfileRoles(): Promise<ProfileRolesData> {
+  return request<ProfileRolesData>('/api/profile/roles')
+}
+
+export async function saveProfileRoles(roles: ProfileRole[]): Promise<void> {
+  await request('/api/profile/roles', {
+    method: 'POST',
+    body: JSON.stringify({ roles }),
+  })
+}
 
 export async function uploadSkillFile(category: string, skill: string, file: File): Promise<{ path: string; name: string }> {
   const base = getBaseUrlValue()
