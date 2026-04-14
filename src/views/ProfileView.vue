@@ -7,21 +7,22 @@ import { fetchMemory, saveMemory, type MemoryData } from '@/api/skills'
 
 const { t } = useI18n()
 const message = useMessage()
+
 const loading = ref(false)
 const saving = ref(false)
 const editing = ref(false)
 const data = ref<MemoryData | null>(null)
 const editContent = ref('')
 
-onMounted(loadMemory)
+onMounted(loadProfile)
 
-async function loadMemory() {
+async function loadProfile() {
   loading.value = true
   try {
     data.value = await fetchMemory()
   } catch (err: any) {
-    console.error('Failed to load memory:', err)
-    message.error(t('memory.loadFailed'))
+    console.error('Failed to load profile:', err)
+    message.error(t('profile.loadFailed'))
   } finally {
     loading.value = false
   }
@@ -29,7 +30,7 @@ async function loadMemory() {
 
 function startEdit() {
   editing.value = true
-  editContent.value = data.value?.memory || ''
+  editContent.value = data.value?.user || ''
 }
 
 function cancelEdit() {
@@ -40,13 +41,13 @@ function cancelEdit() {
 async function handleSave() {
   saving.value = true
   try {
-    await saveMemory('memory', editContent.value)
-    await loadMemory()
+    await saveMemory('user', editContent.value)
+    await loadProfile()
     editing.value = false
     editContent.value = ''
     message.success(t('common.saved'))
   } catch (err: any) {
-    message.error(`${t('common.saveFailed')}: ${err.message}`)
+    message.error(`${t('profile.saveFailed')}: ${err.message}`)
   } finally {
     saving.value = false
   }
@@ -62,26 +63,26 @@ function formatTime(ts: number | null): string {
   })
 }
 
-const memoryEmpty = computed(() => !data.value?.memory?.trim())
-const displayMemory = computed(() => (data.value?.memory || '').replace(/§/g, '\n\n'))
+const profileEmpty = computed(() => !data.value?.user?.trim())
+const displayProfile = computed(() => (data.value?.user || '').replace(/§/g, '\n\n'))
 </script>
 
 <template>
-  <div class="memory-view">
-    <header class="memory-header">
+  <div class="profile-view">
+    <header class="profile-header">
       <div>
-        <h2 class="header-title">{{ t('memory.title') }}</h2>
-        <p class="header-description">{{ t('memory.description') }}</p>
+        <h2 class="header-title">{{ t('profile.title') }}</h2>
+        <p class="header-description">{{ t('profile.description') }}</p>
       </div>
       <div class="header-actions">
-        <NButton size="small" quaternary @click="loadMemory">
+        <NButton size="small" quaternary @click="loadProfile">
           <template #icon>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <polyline points="23 4 23 10 17 10" />
               <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
             </svg>
           </template>
-          {{ t('memory.refresh') }}
+          {{ t('profile.refresh') }}
         </NButton>
         <NButton v-if="!editing" size="small" type="primary" @click="startEdit">
           <template #icon>
@@ -95,34 +96,32 @@ const displayMemory = computed(() => (data.value?.memory || '').replace(/§/g, '
       </div>
     </header>
 
-    <div class="memory-content">
-      <div v-if="loading && !data" class="memory-loading">{{ t('common.loading') }}</div>
-      <div v-else class="memory-card">
+    <div class="profile-content">
+      <div v-if="loading && !data" class="profile-loading">{{ t('common.loading') }}</div>
+      <div v-else class="profile-card">
         <div class="card-header">
           <div class="section-title-row">
             <span class="section-icon">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                <circle cx="12" cy="7" r="4" />
               </svg>
             </span>
-            <span class="section-title">{{ t('memory.myNotes') }}</span>
-            <span v-if="data?.memory_mtime" class="section-mtime">{{ formatTime(data.memory_mtime) }}</span>
+            <span class="section-title">{{ t('memory.userProfile') }}</span>
+            <span v-if="data?.user_mtime" class="section-mtime">{{ formatTime(data.user_mtime) }}</span>
           </div>
         </div>
 
         <div v-if="!editing" class="card-body">
-          <MarkdownRenderer v-if="!memoryEmpty" :content="displayMemory" />
-          <p v-else class="empty-text">{{ t('memory.noNotes') }}</p>
+          <MarkdownRenderer v-if="!profileEmpty" :content="displayProfile" />
+          <p v-else class="empty-text">{{ t('profile.noProfile') }}</p>
         </div>
 
         <div v-else class="section-edit">
           <textarea
             v-model="editContent"
             class="edit-textarea"
-            :placeholder="t('memory.notesPlaceholder')"
+            :placeholder="t('profile.profilePlaceholder')"
             spellcheck="false"
           ></textarea>
           <div class="edit-actions">
@@ -138,13 +137,13 @@ const displayMemory = computed(() => (data.value?.memory || '').replace(/§/g, '
 <style scoped lang="scss">
 @use '@/styles/variables' as *;
 
-.memory-view {
+.profile-view {
   height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.memory-header {
+.profile-header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -171,7 +170,7 @@ const displayMemory = computed(() => (data.value?.memory || '').replace(/§/g, '
   gap: 8px;
 }
 
-.memory-content {
+.profile-content {
   flex: 1;
   overflow: hidden;
   padding: 20px;
@@ -179,7 +178,7 @@ const displayMemory = computed(() => (data.value?.memory || '').replace(/§/g, '
   flex-direction: column;
 }
 
-.memory-loading {
+.profile-loading {
   flex: 1;
   display: flex;
   align-items: center;
@@ -188,7 +187,7 @@ const displayMemory = computed(() => (data.value?.memory || '').replace(/§/g, '
   color: $text-muted;
 }
 
-.memory-card {
+.profile-card {
   flex: 1;
   min-height: 0;
   border: 1px solid $border-color;

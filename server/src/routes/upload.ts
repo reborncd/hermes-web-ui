@@ -1,52 +1,61 @@
 import Router from '@koa/router'
-import { randomBytes } from 'crypto'
 import { mkdir, writeFile } from 'fs/promises'
-import { config } from '../config'
+import { join, resolve } from 'path'
+import { homedir } from 'os'
 
 export const uploadRoutes: Router = new Router()
 
-uploadRoutes.post('/upload', async (ctx) => {
+function parseBoundary(contentType: string): string | null {
+  const match = contentType.match(/boundary=([^;]+)/i)
+  return match ? `--${match[1].trim()}` : null
+}
+
+function parseMultipartFile(contentType: string, rawBody: Buffer): { filename: string; data: Buffer } | null {
+  const boundary = parseBoundary(contentType)
+  if (!boundary) return null
+
+  const body = rawBody.toString('latin1')
+  const parts = body.split(boundary).slice(1, -1)
+
+  for (const part of parts) {
+    const headerEnd = part.indexOf('\r\n\r\n')
+    if (headerEnd === -1) continue
+
+    const header = part.slice(0, headerEnd)
+    const filenameMatch = header.match(/filename="([^"]+)"/)
+    if (!filenameMatch) continue
+
+    const sanitizedName = filenameMatch[1].split(/[\/]/).pop()?.trim() || 'upload.bin'
+    const data = Buffer.from(part.slice(headerEnd + 4, part.length - 2), 'latin1')
+    return { filename: sanitizedName, data }
+  }
+
+  return null
+}
+
+uploadRoutes.post('/api/skills/upload', async (ctx) => {
   const contentType = ctx.get('content-type') || ''
-  if (!contentType.startsWith('multipart/form-data')) {
+  if (!contentType.toLowerCase().startsWith('multipart/form-data')) {
     ctx.status = 400
     ctx.body = { error: 'Expected multipart/form-data' }
     return
   }
 
-  const boundary = '--' + contentType.split('boundary=')[1]
-  if (!boundary || boundary === '--undefined') {
+  const chunks: Buffer[] = []
+  for await (const chunk of ctx.req) chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+  const file = parseMultipartFile(contentType, Buffer.concat(chunks))
+
+  if (!file) {
     ctx.status = 400
-    ctx.body = { error: 'Missing boundary' }
+    ctx.body = { error: 'No file found in upload body' }
     return
   }
 
-  await mkdir(config.uploadDir, { recursive: true })
+  const assetsDir = resolve(join(homedir(), '.hermes', 'skills', 'assets'))
+  await mkdir(assetsDir, { recursive: true })
 
-  // Read raw body
-  const chunks: Buffer[] = []
-  for await (const chunk of ctx.req) chunks.push(chunk)
-  const body = Buffer.concat(chunks).toString('latin1')
-  const parts = body.split(boundary).slice(1, -1)
+  const savedPath = join(assetsDir, file.filename)
+  await writeFile(savedPath, file.data)
 
-  const results: { name: string; path: string }[] = []
-
-  for (const part of parts) {
-    const headerEnd = part.indexOf('\r\n\r\n')
-    if (headerEnd === -1) continue
-    const header = part.substring(0, headerEnd)
-    const data = part.substring(headerEnd + 4, part.length - 2)
-
-    const filenameMatch = header.match(/filename="([^"]+)"/)
-    if (!filenameMatch) continue
-
-    const filename = filenameMatch[1]
-    const ext = filename.includes('.') ? '.' + filename.split('.').pop() : ''
-    const savedName = randomBytes(8).toString('hex') + ext
-    const savedPath = `${config.uploadDir}/${savedName}`
-
-    await writeFile(savedPath, Buffer.from(data, 'binary'))
-    results.push({ name: filename, path: savedPath })
-  }
-
-  ctx.body = { files: results }
+  ctx.body = { name: file.filename, path: 'assets/' + file.filename }
 })

@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { NButton, NUpload, useMessage, type UploadCustomRequestOptions } from 'naive-ui'
 import MarkdownRenderer from '@/components/chat/MarkdownRenderer.vue'
-import { fetchSkillContent, fetchSkillFiles, type SkillFileEntry } from '@/api/skills'
+import { fetchSkillContent, fetchSkillFiles, uploadSkillFile, type SkillFileEntry } from '@/api/skills'
 import { useI18n } from 'vue-i18n'
 
 const { t } = useI18n()
+const message = useMessage()
 
 const props = defineProps<{
   category: string
@@ -17,6 +19,9 @@ const loading = ref(false)
 const fileContent = ref('')
 const viewingFile = ref<string | null>(null)
 const fileLoading = ref(false)
+const uploading = ref(false)
+
+const skillBasePath = computed(() => `${props.category}/${props.skill}`)
 
 async function loadSkill() {
   loading.value = true
@@ -24,16 +29,16 @@ async function loadSkill() {
   fileContent.value = ''
   files.value = []
   content.value = ''
+
   try {
-    const skillPath = `${props.category}/${props.skill}/SKILL.md`
     const [skillContent, skillFiles] = await Promise.all([
-      fetchSkillContent(skillPath),
+      fetchSkillContent(`${skillBasePath.value}/SKILL.md`),
       fetchSkillFiles(props.category, props.skill),
     ])
     content.value = skillContent
     files.value = skillFiles.filter(f => !f.isDir && f.path !== 'SKILL.md')
   } catch (err: any) {
-    content.value = t('skills.loadFailed') + `: ${err.message}`
+    content.value = `${t('skills.loadFailed')}: ${err.message}`
   } finally {
     loading.value = false
   }
@@ -43,20 +48,9 @@ async function viewFile(filePath: string) {
   fileLoading.value = true
   viewingFile.value = filePath
   try {
-    // filePath might be absolute or relative; normalize to relative under category/skill/
-    const base = `${props.category}/${props.skill}/`
-    let relPath = filePath
-    if (filePath.startsWith('/')) {
-      // Strip absolute prefix to get relative path
-      const segments = filePath.split('/.hermes/skills/')[1]
-      if (segments) {
-        const afterSkillDir = segments.split('/').slice(2).join('/')
-        relPath = afterSkillDir
-      }
-    }
-    fileContent.value = await fetchSkillContent(`${base}${relPath}`)
+    fileContent.value = await fetchSkillContent(`${skillBasePath.value}/${filePath}`)
   } catch (err: any) {
-    fileContent.value = t('skills.fileLoadFailed') + `: ${err.message}`
+    fileContent.value = `${t('skills.fileLoadFailed')}: ${err.message}`
   } finally {
     fileLoading.value = false
   }
@@ -67,22 +61,59 @@ function backToSkill() {
   fileContent.value = ''
 }
 
+async function handleUpload(options: UploadCustomRequestOptions) {
+  const rawFile = options.file.file
+  if (!(rawFile instanceof File)) {
+    const error = new Error('Invalid upload file')
+    options.onError()
+    message.error(error.message)
+    return
+  }
+
+  uploading.value = true
+  try {
+    const uploaded = await uploadSkillFile(props.category, props.skill, rawFile)
+    const attachmentPath = uploaded.path
+    const alreadyExists = files.value.some(file => file.path === attachmentPath)
+    if (!alreadyExists) {
+      files.value = [...files.value, { path: attachmentPath, name: uploaded.name, isDir: false }]
+        .sort((a, b) => a.path.localeCompare(b.path))
+    }
+    options.onFinish()
+    message.success(t('skills.uploadSuccess', { name: uploaded.name }))
+    await viewFile(attachmentPath)
+  } catch (err: any) {
+    options.onError()
+    message.error(`${t('skills.uploadFailed')}: ${err.message}`)
+  } finally {
+    uploading.value = false
+  }
+}
+
 watch(() => `${props.category}/${props.skill}`, loadSkill, { immediate: true })
 </script>
 
 <template>
   <div class="skill-detail">
-    <!-- Skill title -->
-    <div class="detail-title">
-      <span class="detail-category">{{ category }}</span>
-      <span class="detail-separator">/</span>
-      <span class="detail-name">{{ skill }}</span>
+    <div class="detail-header">
+      <div class="detail-title">
+        <span class="detail-category">{{ category }}</span>
+        <span class="detail-separator">/</span>
+        <span class="detail-name">{{ skill }}</span>
+      </div>
+      <NUpload
+        :custom-request="handleUpload"
+        :default-upload="false"
+        :show-file-list="false"
+        accept="image/*,.md,.txt,.json,.yaml,.yml,.csv,.pdf"
+      >
+        <NButton size="small" :loading="uploading">{{ t('skills.uploadFile') }}</NButton>
+      </NUpload>
     </div>
 
     <div v-if="loading && !content" class="detail-loading">{{ t('common.loading') }}</div>
 
     <template v-else>
-      <!-- Breadcrumb for file view -->
       <div v-if="viewingFile" class="detail-breadcrumb">
         <button class="back-btn" @click="backToSkill">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -93,13 +124,12 @@ watch(() => `${props.category}/${props.skill}`, loadSkill, { immediate: true })
         <span class="breadcrumb-path">{{ viewingFile }}</span>
       </div>
 
-      <!-- Skill content -->
       <div class="detail-content">
-        <MarkdownRenderer v-if="viewingFile" :content="fileContent" />
+        <div v-if="fileLoading" class="detail-loading">{{ t('common.loading') }}</div>
+        <MarkdownRenderer v-else-if="viewingFile" :content="fileContent" />
         <MarkdownRenderer v-else :content="content" />
       </div>
 
-      <!-- Attached files -->
       <div v-if="!viewingFile && files.length > 0" class="detail-files">
         <div class="files-header">{{ t('skills.attachedFiles') }}</div>
         <div class="files-list">
@@ -130,11 +160,18 @@ watch(() => `${props.category}/${props.skill}`, loadSkill, { immediate: true })
   flex-direction: column;
 }
 
-.detail-title {
+.detail-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   flex-shrink: 0;
   padding-bottom: 12px;
   border-bottom: 1px solid $border-color;
   margin-bottom: 12px;
+}
+
+.detail-title {
   font-size: 15px;
 }
 
@@ -246,5 +283,4 @@ watch(() => `${props.category}/${props.skill}`, loadSkill, { immediate: true })
     color: $accent-primary;
   }
 }
-
 </style>

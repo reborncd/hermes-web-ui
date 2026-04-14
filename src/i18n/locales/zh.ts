@@ -29,6 +29,7 @@ export default {
     models: '模型',
     skills: '技能',
     memory: '记忆',
+    profile: '画像',
     logs: '日志',
     usage: '用量',
     channels: '频道',
@@ -126,6 +127,9 @@ export default {
   // 技能
   skills: {
     title: '技能',
+    uploadFile: '上传文件',
+    uploadSuccess: '已上传 {name}',
+    uploadFailed: '上传失败',
     searchPlaceholder: '搜索技能...',
     noMatch: '没有匹配的技能',
     noSkills: '暂无技能',
@@ -138,12 +142,21 @@ export default {
   // 记忆
   memory: {
     title: '记忆',
+    description: 'Hermes 的工作记忆与操作笔记。',
     refresh: '刷新',
     loadFailed: '加载记忆失败',
     myNotes: '我的笔记',
     noNotes: '暂无笔记。',
     notesPlaceholder: '输入笔记内容...',
     userProfile: '用户画像',
+  },
+
+  profile: {
+    title: '画像',
+    description: '稳定的用户偏好与长期协作方式。',
+    refresh: '刷新',
+    loadFailed: '加载画像失败',
+    saveFailed: '保存画像失败',
     noProfile: '暂无画像。',
     profilePlaceholder: '输入用户画像...',
   },

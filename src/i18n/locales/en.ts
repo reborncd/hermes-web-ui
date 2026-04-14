@@ -29,6 +29,7 @@ export default {
     models: 'Models',
     skills: 'Skills',
     memory: 'Memory',
+    profile: 'Profile',
     logs: 'Logs',
     usage: 'Usage',
     channels: 'Channels',
@@ -126,6 +127,9 @@ export default {
   // Skills
   skills: {
     title: 'Skills',
+    uploadFile: 'Upload File',
+    uploadSuccess: 'Uploaded {name}',
+    uploadFailed: 'Upload failed',
     searchPlaceholder: 'Search skills...',
     noMatch: 'No skills match your search',
     noSkills: 'No skills found',
@@ -138,12 +142,21 @@ export default {
   // Memory
   memory: {
     title: 'Memory',
+    description: 'Hermes working memory and operator notes.',
     refresh: 'Refresh',
     loadFailed: 'Failed to load memory',
     myNotes: 'My Notes',
     noNotes: 'No notes yet.',
     notesPlaceholder: 'Write your notes...',
     userProfile: 'User Profile',
+  },
+
+  profile: {
+    title: 'Profile',
+    description: 'Stable user preferences and long-term working style.',
+    refresh: 'Refresh',
+    loadFailed: 'Failed to load profile',
+    saveFailed: 'Failed to save profile',
     noProfile: 'No profile yet.',
     profilePlaceholder: 'Write your profile...',
   },

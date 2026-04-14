@@ -1,4 +1,4 @@
-import { request } from './client'
+import { getBaseUrlValue, request } from './client'
 
 export interface SkillInfo {
   name: string
@@ -52,4 +52,30 @@ export async function saveMemory(section: 'memory' | 'user', content: string): P
     method: 'POST',
     body: JSON.stringify({ section, content }),
   })
+}
+
+
+export async function uploadSkillFile(category: string, skill: string, file: File): Promise<{ path: string; name: string }> {
+  const base = getBaseUrlValue()
+  const formData = new FormData()
+  formData.append('file', file)
+
+  const res = await fetch(`${base}/api/skills/upload`, {
+    method: 'POST',
+    body: formData,
+  })
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '')
+    throw new Error(`API Error ${res.status}: ${text || res.statusText}`)
+  }
+
+  const uploaded = await res.json() as { path: string; name: string }
+
+  await request<{ path: string; name: string }>(`/api/skills/${category}/${skill}/assets`, {
+    method: 'POST',
+    body: JSON.stringify({ uploadedPath: uploaded.path, fileName: uploaded.name }),
+  })
+
+  return { path: `assets/${uploaded.name}`, name: uploaded.name }
 }

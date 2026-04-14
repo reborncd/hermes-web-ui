@@ -120,6 +120,18 @@ async function safeStat(filePath: string): Promise<{ mtime: number } | null> {
   }
 }
 
+function getSkillRoot(category: string, skill: string): string {
+  return resolve(join(hermesDir, 'skills', category, skill))
+}
+
+function assertWithinSkillRoot(targetPath: string, skillRoot: string): string {
+  const resolved = resolve(targetPath)
+  if (!resolved.startsWith(skillRoot + '/')) {
+    throw new Error('Access denied')
+  }
+  return resolved
+}
+
 // --- Config YAML helpers ---
 
 const configPath = resolve(homedir(), '.hermes/config.yaml')
@@ -210,7 +222,7 @@ async function listFilesRecursive(dir: string, prefix: string): Promise<{ path: 
 
 fsRoutes.get('/api/skills/:category/:skill/files', async (ctx) => {
   const { category, skill } = ctx.params
-  const skillDir = join(hermesDir, 'skills', category, skill)
+  const skillDir = getSkillRoot(category, skill)
 
   try {
     const allFiles = await listFilesRecursive(skillDir, '')
@@ -241,6 +253,46 @@ fsRoutes.get('/api/skills/:path(.+)', async (ctx) => {
   }
 
   ctx.body = { content }
+})
+
+fsRoutes.post('/api/skills/:category/:skill/assets', async (ctx) => {
+  const { category, skill } = ctx.params
+  const body = (ctx.request as any).body as { uploadedPath?: string; fileName?: string } | undefined
+  const uploadedPath = body?.uploadedPath?.trim()
+  const requestedName = body?.fileName?.trim()
+
+  if (!uploadedPath) {
+    ctx.status = 400
+    ctx.body = { error: 'uploadedPath is required' }
+    return
+  }
+
+  if (!requestedName) {
+    ctx.status = 400
+    ctx.body = { error: 'fileName is required' }
+    return
+  }
+
+  const uploadRoot = resolve(join(hermesDir, 'skills', 'assets'))
+  const sourcePath = resolve(join(hermesDir, 'skills', uploadedPath))
+  if (!sourcePath.startsWith(uploadRoot + '/')) {
+    ctx.status = 403
+    ctx.body = { error: 'Access denied' }
+    return
+  }
+
+  const skillRoot = getSkillRoot(category, skill)
+  const assetsDir = assertWithinSkillRoot(join(skillRoot, 'assets'), skillRoot)
+  const destinationPath = assertWithinSkillRoot(join(assetsDir, requestedName), skillRoot)
+
+  try {
+    await mkdir(assetsDir, { recursive: true })
+    await copyFile(sourcePath, destinationPath)
+    ctx.body = { path: `assets/${requestedName}`, name: requestedName }
+  } catch (err: any) {
+    ctx.status = 500
+    ctx.body = { error: err.message }
+  }
 })
 
 // --- Memory Routes ---
