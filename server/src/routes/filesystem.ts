@@ -234,6 +234,30 @@ fsRoutes.get('/api/skills/:category/:skill/files', async (ctx) => {
   }
 })
 
+fsRoutes.get('/api/skills/:category/:skill/raw/:filePath(.+)', async (ctx) => {
+  const { category, skill } = ctx.params
+  const relativePath = decodeURIComponent(ctx.params.filePath)
+  const skillRoot = getSkillRoot(category, skill)
+
+  let filePath: string
+  try {
+    filePath = assertWithinSkillRoot(join(skillRoot, relativePath), skillRoot)
+  } catch {
+    ctx.status = 403
+    ctx.body = { error: 'Access denied' }
+    return
+  }
+
+  try {
+    const content = await readFile(filePath)
+    ctx.type = filePath
+    ctx.body = content
+  } catch {
+    ctx.status = 404
+    ctx.body = { error: 'File not found' }
+  }
+})
+
 // Read a specific file under skills/
 fsRoutes.get('/api/skills/:path(.+)', async (ctx) => {
   const filePath = ctx.params.path
