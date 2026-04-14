@@ -9,7 +9,7 @@ import { restartGateway } from '../services/hermes-cli'
 const envPath = resolve(homedir(), '.hermes/.env')
 const ILINK_BASE = 'https://ilinkai.weixin.qq.com'
 
-export const weixinRoutes = new Router()
+export const weixinRoutes: Router = new Router()
 
 // GET /api/weixin/qrcode — fetch QR code from Tencent iLink API
 weixinRoutes.get('/api/weixin/qrcode', async (ctx) => {
@@ -69,7 +69,7 @@ weixinRoutes.get('/api/weixin/qrcode/status', async (ctx) => {
 
 // POST /api/weixin/save — save weixin credentials to .env
 weixinRoutes.post('/api/weixin/save', async (ctx) => {
-  const { account_id, token, base_url } = ctx.request.body as {
+  const { account_id, token, base_url } = (ctx.request as any).body as {
     account_id: string
     token: string
     base_url?: string

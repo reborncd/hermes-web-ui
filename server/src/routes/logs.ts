@@ -1,7 +1,7 @@
 import Router from '@koa/router'
 import * as hermesCli from '../services/hermes-cli'
 
-export const logRoutes = new Router()
+export const logRoutes: Router = new Router()
 
 // List available log files
 logRoutes.get('/api/logs', async (ctx) => {

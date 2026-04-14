@@ -60,7 +60,7 @@ async function fetchProviderModels(baseUrl: string, apiKey: string): Promise<str
 import { buildProviderModelMap } from '../shared/providers'
 const PROVIDER_MODEL_CATALOG = buildProviderModelMap()
 
-export const fsRoutes = new Router()
+export const fsRoutes: Router = new Router()
 
 const hermesDir = resolve(homedir(), '.hermes')
 
@@ -265,7 +265,7 @@ fsRoutes.get('/api/memory', async (ctx) => {
 })
 
 fsRoutes.post('/api/memory', async (ctx) => {
-  const { section, content } = ctx.request.body as { section: string; content: string }
+  const { section, content } = (ctx.request as any).body as { section: string; content: string }
 
   if (!section || !content) {
     ctx.status = 400
@@ -438,7 +438,7 @@ fsRoutes.get('/api/config/models', async (ctx) => {
 
 // PUT /api/config/model
 fsRoutes.put('/api/config/model', async (ctx) => {
-  const { default: defaultModel, provider: reqProvider } = ctx.request.body as {
+  const { default: defaultModel, provider: reqProvider } = (ctx.request as any).body as {
     default: string
     provider?: string
   }
@@ -471,7 +471,7 @@ fsRoutes.put('/api/config/model', async (ctx) => {
 
 // POST /api/config/providers
 fsRoutes.post('/api/config/providers', async (ctx) => {
-  const { name, base_url, api_key, model, providerKey } = ctx.request.body as {
+  const { name, base_url, api_key, model, providerKey } = (ctx.request as any).body as {
     name: string
     base_url: string
     api_key: string

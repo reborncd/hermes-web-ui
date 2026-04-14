@@ -1,7 +1,7 @@
 import Router from '@koa/router'
 import { emitWebhook } from '../services/hermes'
 
-export const webhookRoutes = new Router()
+export const webhookRoutes: Router = new Router()
 
 /**
  * POST /webhook — receive callbacks from Hermes Agent
@@ -16,7 +16,7 @@ export const webhookRoutes = new Router()
  * TODO: Add signature verification when Hermes supports webhook signing
  */
 webhookRoutes.post('/webhook', async (ctx) => {
-  const payload = ctx.request.body
+  const payload = (ctx.request as any).body
 
   if (!payload || !payload.event) {
     ctx.status = 400

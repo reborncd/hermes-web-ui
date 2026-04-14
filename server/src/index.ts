@@ -68,7 +68,7 @@ export async function bootstrap() {
   app.use(serve(distDir))
   app.use(async (ctx) => {
     if (!ctx.path.startsWith('/api') && !ctx.path.startsWith('/v1') && ctx.path !== '/health' && ctx.path !== '/upload' && ctx.path !== '/webhook') {
-      await send(ctx, 'index.html', { root: distDir })
+      await send(ctx as any, 'index.html', { root: distDir })
     }
   })
 

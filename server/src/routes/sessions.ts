@@ -1,7 +1,7 @@
 import Router from '@koa/router'
 import * as hermesCli from '../services/hermes-cli'
 
-export const sessionRoutes = new Router()
+export const sessionRoutes: Router = new Router()
 
 // List sessions from Hermes
 sessionRoutes.get('/api/sessions', async (ctx) => {
@@ -35,7 +35,7 @@ sessionRoutes.delete('/api/sessions/:id', async (ctx) => {
 
 // Rename session
 sessionRoutes.post('/api/sessions/:id/rename', async (ctx) => {
-  const { title } = ctx.request.body as { title?: string }
+  const { title } = (ctx.request as any).body as { title?: string }
   if (!title || typeof title !== 'string') {
     ctx.status = 400
     ctx.body = { error: 'title is required' }

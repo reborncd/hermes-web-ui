@@ -3,7 +3,7 @@ import { randomBytes } from 'crypto'
 import { mkdir, writeFile } from 'fs/promises'
 import { config } from '../config'
 
-export const uploadRoutes = new Router()
+export const uploadRoutes: Router = new Router()
 
 uploadRoutes.post('/upload', async (ctx) => {
   const contentType = ctx.get('content-type') || ''

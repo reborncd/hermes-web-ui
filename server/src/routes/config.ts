@@ -165,7 +165,7 @@ async function writeConfig(data: Record<string, any>): Promise<void> {
   await writeFile(configPath, yamlStr, 'utf-8')
 }
 
-export const configRoutes = new Router()
+export const configRoutes: Router = new Router()
 
 // GET /api/config — read config sections
 configRoutes.get('/api/config', async (ctx) => {
@@ -203,7 +203,7 @@ configRoutes.get('/api/config', async (ctx) => {
 
 // PUT /api/config — update a config section (writes to config.yaml)
 configRoutes.put('/api/config', async (ctx) => {
-  const { section, values } = ctx.request.body as {
+  const { section, values } = (ctx.request as any).body as {
     section: string
     values: Record<string, any>
   }
@@ -233,7 +233,7 @@ configRoutes.put('/api/config', async (ctx) => {
 // Body: { platform: string, values: Record<string, any> }
 // values keys match PlatformConfig paths: 'token', 'extra.app_id', 'extra.app_secret', etc.
 configRoutes.put('/api/config/credentials', async (ctx) => {
-  const { platform, values } = ctx.request.body as {
+  const { platform, values } = (ctx.request as any).body as {
     platform: string
     values: Record<string, any>
   }
